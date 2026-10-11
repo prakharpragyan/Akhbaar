@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "pwa-node",
+      "request": "launch",
+      "name": "Launch Server (Dev)",
+      "program": "${workspaceFolder}/server/server.js",
+      "cwd": "${workspaceFolder}/server",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/server/.env"
+    },
+    {
+      "type": "pwa-chrome",
+      "request": "launch",
+      "name": "Open Client (Vite)",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/client",
+      "preLaunchTask": "Start Client"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run Full Stack",
+      "configurations": ["Launch Server (Dev)", "Open Client (Vite)"]
+    }
+  ]
+}

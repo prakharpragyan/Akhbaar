@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { useState, useEffect } from 'react'
+import { useDispatch, useSelector, shallowEqual } from 'react-redux'
 import {
   ExternalLink, Clock, Building2,
   Sparkles, BookOpen, Loader2,
@@ -38,9 +38,16 @@ function timeAgo(dateStr) {
   return `${Math.floor(diff / 1440)}d ago`
 }
 
-export default function NewsCard({ article, index = 0 }) {
+export default function NewsCard({ article, index = 0, initialBookmarked = false, onBookmarkToggle }) {
   const dispatch = useDispatch()
-  const aiState  = useSelector((s) => s.ai)
+
+  // ── Scoped AI selector ─────────────────────────────────────────────────
+  const aiState = useSelector((s) => ({
+    result:            s.ai.results[article.url] || {},
+    isLoadingSummary:   s.ai.loading[`${article.url}_summary`],
+    isLoadingExplain:   s.ai.loading[`${article.url}_explain`],
+    isLoadingSentiment: s.ai.loading[`${article.url}_sentiment`],
+  }), shallowEqual)
 
   const {
     title, description, url,
@@ -50,23 +57,29 @@ export default function NewsCard({ article, index = 0 }) {
 
   // ── Local state ────────────────────────────────────────────────────────
   const [openPanel,      setOpenPanel]      = useState(null) // null | 'summary' | 'explain'
-  const [bookmarked,     setBookmarked]     = useState(false)
+  const [bookmarked,     setBookmarked]     = useState(initialBookmarked || Boolean(article.isBookmarked || article.bookmarked))
   const [bookmarkLoading,setBookmarkLoading]= useState(false)
 
   // ── AI state from Redux ────────────────────────────────────────────────
-  const results            = aiState.results[url]              || {}
-  const isLoadingSummary   = aiState.loading[`${url}_summary`]
-  const isLoadingExplain   = aiState.loading[`${url}_explain`]
-  const isLoadingSentiment = aiState.loading[`${url}_sentiment`]
+  const results            = aiState.result
+  const isLoadingSummary   = aiState.isLoadingSummary
+  const isLoadingExplain   = aiState.isLoadingExplain
+  const isLoadingSentiment = aiState.isLoadingSentiment
 
   const articleData = { title, description, url }
 
-  // ── Auto fetch sentiment when card mounts ──────────────────────────────
-  const handleSentimentLoad = () => {
+  // ── Auto fetch sentiment once, on mount ────────────────────────────────
+  // Previously this ran from an inline callback ref (`ref={(el) => ...}`),
+  // which React re-invokes on every render because the function is a new
+  // reference each time — not just on mount. That fired a fresh sentiment
+  // dispatch on every re-render of every visible card. useEffect with an
+  // empty dependency array runs exactly once per mounted card instead.
+  useEffect(() => {
     if (!results.sentiment && !isLoadingSentiment) {
       dispatch(sentimentArticle(articleData))
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url])
 
   // ── AI button handlers ─────────────────────────────────────────────────
   const handleSummarize = () => {
@@ -93,6 +106,7 @@ export default function NewsCard({ article, index = 0 }) {
         urlToImage, source, publishedAt, category,
       })
       setBookmarked(data.bookmarked)
+      if (onBookmarkToggle) onBookmarkToggle(data.bookmarked)
     } catch (err) {
       console.error('Bookmark failed:', err)
     }
@@ -115,7 +129,6 @@ export default function NewsCard({ article, index = 0 }) {
         hover:border-ink-200 hover:shadow-sm transition-all duration-200
         fade-up fade-up-delay-${Math.min(index % 4 + 1, 4)}
       `}
-      ref={(el) => { if (el) handleSentimentLoad() }}
     >
       {/* Thumbnail */}
       {urlToImage && (

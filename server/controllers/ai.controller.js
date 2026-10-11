@@ -17,8 +17,12 @@ const getCachedOrFetch = async (articleUrl, type, fetchFn) => {
   console.log(`🤖 Calling Groq AI for ${type}: ${articleUrl}`)
   const result = await fetchFn()
 
-  // 3. Save to cache
-  await AiCache.create({ articleUrl, type, result })
+  // 3. Save to cache (use upsert to prevent E11000 duplicate key errors during concurrent requests)
+  await AiCache.findOneAndUpdate(
+    { articleUrl, type },
+    { result },
+    { upsert: true, new: true }
+  )
 
   return { result, cached: false }
 }

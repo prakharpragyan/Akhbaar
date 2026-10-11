@@ -87,3 +87,30 @@ MIT
 
 ## Contact
 If you want help or want to report an issue, open a GitHub issue.
+## Run from VS Code
+
+You can run frontend and backend directly from VS Code using the included tasks and launch configurations.
+
+- Run both at once: open Command Palette → `Tasks: Run Task` → select `Run All`.
+- Or start them separately: Command Palette → `Tasks: Run Task` → `Start Server` or `Start Client`.
+
+To use the debugger and open the client in a browser:
+
+- Open the Run view (left sidebar) and start the `Run Full Stack` configuration.
+	- This launches the Node server (uses `${workspaceFolder}/server/server.js`) and opens Chrome to the Vite URL.
+
+If you prefer terminals, the equivalent commands are:
+
+```powershell
+# from workspace root
+cd server
+npm run dev
+
+# in a second terminal
+cd client
+npm run dev
+```
+
+Notes:
+- Ensure you have a `.env` file in `server/` with `MONGO_URI` and `JWT_SECRET` before starting the server.
+- Vite usually serves the client at `http://localhost:5173`.

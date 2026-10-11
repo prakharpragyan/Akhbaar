@@ -10,6 +10,7 @@ export const loginUser = createAsyncThunk(
     try {
       const { data } = await authAPI.login(credentials)
       localStorage.setItem('akhbaar_token', data.token)
+      localStorage.setItem('akhbaar_user', JSON.stringify(data.user))
       return data
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Login failed')
@@ -23,6 +24,7 @@ export const registerUser = createAsyncThunk(
     try {
       const { data } = await authAPI.register(userData)
       localStorage.setItem('akhbaar_token', data.token)
+      localStorage.setItem('akhbaar_user', JSON.stringify(data.user))
       return data
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Registration failed')
@@ -36,6 +38,10 @@ export const updateUserPreferences = createAsyncThunk(
   async (preferences, { rejectWithValue }) => {
     try {
       const { data } = await authAPI.updatePreferences(preferences)
+      const cachedUser = JSON.parse(localStorage.getItem('akhbaar_user') || 'null')
+      if (cachedUser) {
+        localStorage.setItem('akhbaar_user', JSON.stringify({ ...cachedUser, preferences: data.preferences }))
+      }
       return data.preferences
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to update preferences')
@@ -43,11 +49,31 @@ export const updateUserPreferences = createAsyncThunk(
   }
 )
 
+export const fetchCurrentUser = createAsyncThunk(
+  'auth/fetchCurrentUser',
+  async (_, { rejectWithValue }) => {
+    try {
+      const { data } = await authAPI.getMe()
+      localStorage.setItem('akhbaar_user', JSON.stringify(data.user))
+      return data.user
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to fetch user')
+    }
+  }
+)
+
 // ─── Slice ────────────────────────────────────────────────────────────────
+let initialUser = null
+try {
+  initialUser = JSON.parse(localStorage.getItem('akhbaar_user') || 'null')
+} catch (e) {
+  initialUser = null
+}
+
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
-    user:    null,
+    user:    initialUser,
     token:   localStorage.getItem('akhbaar_token') || null,
     loading: false,
     error:   null,
@@ -57,6 +83,7 @@ const authSlice = createSlice({
       state.user  = null
       state.token = null
       localStorage.removeItem('akhbaar_token')
+      localStorage.removeItem('akhbaar_user')
     },
     clearError(state) {
       state.error = null
@@ -108,6 +135,18 @@ const authSlice = createSlice({
       .addCase(updateUserPreferences.rejected, (state, action) => {
         state.loading = false
         state.error   = action.payload
+      })
+
+    // ── FETCH CURRENT USER ─────────────────────────────────────────────
+    builder
+      .addCase(fetchCurrentUser.fulfilled, (state, action) => {
+        state.user = action.payload
+      })
+      .addCase(fetchCurrentUser.rejected, (state) => {
+        state.user = null
+        state.token = null
+        localStorage.removeItem('akhbaar_token')
+        localStorage.removeItem('akhbaar_user')
       })
   },
 })

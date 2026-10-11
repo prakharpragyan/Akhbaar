@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
+import { fetchCurrentUser } from './redux/slices/authSlice'
 import LoginPage       from './pages/LoginPage'
 import RegisterPage    from './pages/RegisterPage'
 import FeedPage        from './pages/FeedPage'
@@ -14,6 +16,14 @@ function PrivateRoute({ children }) {
 }
 
 export default function App() {
+  const dispatch = useDispatch()
+  const { token } = useSelector((state) => state.auth)
+
+  useEffect(() => {
+    if (token) {
+      dispatch(fetchCurrentUser())
+    }
+  }, [dispatch, token])
   return (
     <BrowserRouter>
       <Routes>

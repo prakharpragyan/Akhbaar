@@ -1,6 +1,5 @@
-// ─── Load environment variables FIRST ────────────────────────────────────────
-// dotenv reads .env file and puts values into process.env
-// Must be called before anything else uses process.env
+const path = require('path')
+require('dotenv').config({ path: path.join(__dirname, '.env') })
 require('dotenv').config()
 
 const express     = require('express')
@@ -20,12 +19,25 @@ connectDB()
 // ─── Create Express App ───────────────────────────────────────────────────────
 const app = express()
 
+// Trust reverse proxy (Render, Railway, Heroku, Nginx) for accurate IP rate limiting
+app.set('trust proxy', 1)
+
 // ─── CORS ─────────────────────────────────────────────────────────────────────
-// Allows your React frontend (different port/domain) to call this API
-// Without this, browsers block cross-origin requests
+// Allows React frontend to call this API, handling trailing slashes and multiple environments
+const clientOrigin = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '')
+const allowedOrigins = Array.from(new Set([clientOrigin, 'http://localhost:5173', 'http://127.0.0.1:5173']))
+
 app.use(cors({
-  origin:      process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true,  // allows cookies if needed later
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      return callback(null, true)
+    }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true)
+    }
+    callback(null, false)
+  },
+  credentials: true,
 }))
 
 // ─── Body Parser ─────────────────────────────────────────────────────────────
@@ -42,14 +54,32 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
-// Prevents brute-force attacks on auth endpoints
-// 100 requests per 15 minutes per IP
-const limiter = rateLimit({
+// A single global limiter shared across every /api/* route was too strict for
+// real usage: a single feed load fires one request per article for AI
+// sentiment, plus the feed/personalized/recommendations calls themselves —
+// easily 20-30+ requests in a few seconds. That burned through the shared
+// budget almost immediately, after which EVERY route (including unrelated
+// ones like /api/news/bookmarks) started returning 429, even though only the
+// login/register endpoints actually need brute-force protection.
+//
+// Fix: a strict limiter only on the auth routes that need it, and a much
+// more generous one for everything else (news + AI), sized for a feed page
+// that can trigger dozens of calls per load.
+const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,  // 15 minutes
-  max:      100,
-  message:  { success: false, message: 'Too many requests — try again later' },
+  max:      30,              // login/register attempts per IP
+  message:  { success: false, message: 'Too many attempts — try again later' },
 })
-app.use('/api/', limiter)
+
+const apiLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,   // 5 minutes
+  max:      500,             // generous enough for a feed of AI-annotated cards
+  message:  { success: false, message: 'Too many requests — try again in a moment' },
+})
+
+app.use('/api/auth', authLimiter)
+app.use('/api/news', apiLimiter)
+app.use('/api/ai', apiLimiter)
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 // Simple endpoint to verify the server is running

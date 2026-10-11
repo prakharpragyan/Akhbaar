@@ -10,8 +10,6 @@ const newsSchema = new mongoose.Schema(
       type:    String,
       required: true,
       lowercase: true,
-      // One cache document per category
-      index: true,
     },
 
     // The full array of articles returned by NewsAPI for this category
@@ -26,6 +24,7 @@ const newsSchema = new mongoose.Schema(
           id:   { type: String },
           name: { type: String },
         },
+        category:    { type: String, lowercase: true },
         // Phase 4: track click count for "Trending" feature
         clicks: { type: Number, default: 0 },
       },

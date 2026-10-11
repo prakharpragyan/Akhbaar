@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { updateUserPreferences } from '../redux/slices/authSlice'
@@ -24,6 +24,12 @@ export default function PreferencesPage() {
   // Initialize with user's current preferences
   const [selected, setSelected] = useState(user?.preferences || [])
   const [saved, setSaved]       = useState(false)
+
+  useEffect(() => {
+    if (user?.preferences?.length) {
+      setSelected(user.preferences)
+    }
+  }, [user?.preferences])
 
   const toggle = (id) => {
     setSaved(false)

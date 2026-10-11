@@ -123,10 +123,11 @@ const searchNews = async (req, res, next) => {
     }
 
     const newsDocs = await News.find({})
-    const allArticles = newsDocs.flatMap((doc) => doc.articles)
-    const regex = new RegExp(q.trim(), 'i')
+    const allArticles = newsDocs.flatMap((doc) => doc.articles || [])
+    const sanitized = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(sanitized, 'i')
     const results = allArticles.filter(
-      (a) => regex.test(a.title) || regex.test(a.description)
+      (a) => (a.title && regex.test(a.title)) || (a.description && regex.test(a.description))
     )
 
     res.status(200).json({
