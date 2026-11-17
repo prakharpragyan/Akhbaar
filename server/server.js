@@ -25,14 +25,14 @@ app.set('trust proxy', 1)
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 // Allows React frontend to call this API, handling trailing slashes and multiple environments
 const clientOrigin = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '')
-const allowedOrigins = Array.from(new Set([clientOrigin, 'http://localhost:5173', 'http://127.0.0.1:5173']))
+const allowedOrigins = Array.from(new Set([clientOrigin, 'https://akhbaar-gules.vercel.app', 'http://localhost:5173', 'http://127.0.0.1:5173']))
 
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
       return callback(null, true)
     }
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(origin) || (origin && origin.endsWith('.vercel.app'))) {
       return callback(null, true)
     }
     callback(null, false)
