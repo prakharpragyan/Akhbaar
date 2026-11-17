@@ -47,6 +47,8 @@ export default function NewsCard({ article, index = 0, initialBookmarked = false
     isLoadingSummary:   s.ai.loading[`${article.url}_summary`],
     isLoadingExplain:   s.ai.loading[`${article.url}_explain`],
     isLoadingSentiment: s.ai.loading[`${article.url}_sentiment`],
+    errorSummary:       s.ai.errors[`${article.url}_summary`],
+    errorExplain:       s.ai.errors[`${article.url}_explain`],
   }), shallowEqual)
 
   const {
@@ -65,6 +67,8 @@ export default function NewsCard({ article, index = 0, initialBookmarked = false
   const isLoadingSummary   = aiState.isLoadingSummary
   const isLoadingExplain   = aiState.isLoadingExplain
   const isLoadingSentiment = aiState.isLoadingSentiment
+  const errorSummary       = aiState.errorSummary
+  const errorExplain       = aiState.errorExplain
 
   const articleData = { title, description, url }
 
@@ -269,12 +273,16 @@ export default function NewsCard({ article, index = 0, initialBookmarked = false
             {openPanel === 'summary' && (
               isLoadingSummary
                 ? <span className="text-xs text-amber-400 flex items-center gap-2"><Loader2 size={11} className="animate-spin" /> Generating summary...</span>
-                : <p className="whitespace-pre-line text-xs leading-relaxed">{results.summary}</p>
+                : errorSummary
+                  ? <span className="text-xs text-red-600">{errorSummary}</span>
+                  : <p className="whitespace-pre-line text-xs leading-relaxed">{results.summary}</p>
             )}
             {openPanel === 'explain' && (
               isLoadingExplain
                 ? <span className="text-xs text-blue-400 flex items-center gap-2"><Loader2 size={11} className="animate-spin" /> Generating explanation...</span>
-                : <p className="text-xs leading-relaxed">{results.explanation}</p>
+                : errorExplain
+                  ? <span className="text-xs text-red-600">{errorExplain}</span>
+                  : <p className="text-xs leading-relaxed">{results.explanation}</p>
             )}
           </div>
         )}

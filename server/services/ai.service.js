@@ -105,11 +105,11 @@ const analyzeSentiment = async (title, description) => {
   const result = await callGroq(prompt)
 
   // Clean and validate the response
-  const sentiment = result?.toLowerCase().trim()
-  if (['positive', 'negative', 'neutral'].includes(sentiment)) {
-    return sentiment
-  }
-  return 'neutral' // default fallback
+  const raw = result?.toLowerCase().trim() || ''
+  if (raw.includes('positive')) return 'positive'
+  if (raw.includes('negative')) return 'negative'
+  if (raw.includes('neutral'))  return 'neutral'
+  return 'neutral'
 }
 
 module.exports = { summarizeArticle, explainSimply, analyzeSentiment }
